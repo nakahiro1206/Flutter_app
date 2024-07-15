@@ -13,13 +13,43 @@ class AudioListScreen extends StatefulWidget {
 }
 
 class _AudioListScreenState extends State<AudioListScreen> {
+  // general setting for audio playing.
   List<File> _audioFiles = [];
   final AudioPlayer _audioPlayer = AudioPlayer();
   File? _selectedFile;
   double _bpmMultiplier = 1.0;
+  bool _isPlaying = false;
+  bool _isCompleted = false;
+  Duration? _duration = Duration.zero;
+  Duration? _position = Duration.zero;
 
   @override
   void initState() {
+    // Listen player states
+    _audioPlayer.playerStateStream.listen((event) async {
+      setState(() {
+        _isPlaying = event.playing;
+      });
+      if (event.processingState == ProcessingState.completed) {
+        setState(() {
+          _isPlaying = false;
+          _position = const Duration(seconds: 0);
+          _isCompleted = true;
+        });
+      }
+    });
+    // Listen audio duration
+    _audioPlayer.durationStream.listen((newDuration) {
+      setState(() {
+        _duration = newDuration;
+      });
+    });
+    // Listen audio position
+    _audioPlayer.positionStream.listen((newPosition) {
+      setState(() {
+        _position = newPosition;
+      });
+    });
     super.initState();
     _loadAudioFiles();
   }
@@ -53,6 +83,7 @@ class _AudioListScreenState extends State<AudioListScreen> {
         debugPrint("_audioPlayer.setSpeed: $_bpmMultiplier");
         await _audioPlayer.setSpeed(_bpmMultiplier);
         debugPrint("speed is set");
+
         await _audioPlayer.play();
         debugPrint("audio is playing");
       } catch (e) {
@@ -61,43 +92,17 @@ class _AudioListScreenState extends State<AudioListScreen> {
     } else {
       debugPrint("No file selected");
     }
+  }
 
-    // String fp = "/data/user/0/com.example.flutter_app/app_flutter/sample.mp3";
-    // try {
-    //   await _audioPlayer.setFilePath(fp); // (_selectedFile!.path);
-    //   _audioPlayer.play();
-    // } catch (e) {
-    //   debugPrint("$e");
-    // }
-
-    // try {
-    //   await _audioPlayer.setFilePath(path);
-    //   _audioPlayer.play();
-    // } catch (e) {
-    //   debugPrint("Error playing audio: $e");
-    // }
-
-
+  String getDuration(double value) {
+    Duration duration = Duration(milliseconds: value.round());
+    return [duration.inHours, duration.inMinutes, duration.inSeconds]
+        .map((e) => e.remainder(60).toString().padLeft(2, "0"))
+        .join(":");
   }
 
   @override
   Widget build(BuildContext context) {
-    // return Scaffold(
-    //   appBar: AppBar(
-    //     title: const Text('Audio List'),
-    //   ),
-    //   body: ListView.builder(
-    //     itemCount: _audioFiles.length,
-    //     itemBuilder: (context, index) {
-    //       final file = _audioFiles[index];
-    //       return ListTile(
-    //         title: Text(file.path.split('/').last),
-    //         onTap: () => _playAudio(file.path),
-    //       );
-    //     },
-    //   ),
-    // );
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Music Player'),
@@ -148,6 +153,17 @@ class _AudioListScreenState extends State<AudioListScreen> {
             },
           ),
           Text('BPM Multiplier: ${_bpmMultiplier.toStringAsFixed(2)}x'),
+          Slider(
+            value: _position!.inMilliseconds.toDouble(),
+            min: 0,
+            max: _duration!.inMilliseconds.toDouble(),
+            onChanged: (double val) {
+              setState((){
+                _position = Duration(milliseconds: val.toInt());
+                _audioPlayer.seek(_position);
+              });
+            },
+          ),
         ],
       ),
     );
