@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'audio_list_screen.dart';
+import 'audio_play_screen.dart';
 import 'audio_downloader.dart';
+import 'call_c.dart' show testNativeAdd;
+import 'calc_bpm.dart' show calcBPM;
 
 void main() {
   runApp(MyApp());
@@ -74,6 +76,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
               child: const Text('Go to Audio List'),
+            ),
+            const ElevatedButton(
+              onPressed: calcBPM,
+              child: Text('Start Backend'),
             ),
           ],
         ),
