@@ -2,18 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-// import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
 
-class AudioDownloader {
+class AudioDownloader extends StatefulWidget {
+
+  @override
+  _AudioDownloaderState createState() => _AudioDownloaderState();
+}
+
+class _AudioDownloaderState extends State<AudioDownloader> {
+  final TextEditingController _controller = TextEditingController();
   final YoutubeExplode yt = YoutubeExplode();
 
   Future<void> downloadAudio(String url) async {
     try {
-      // var status = await Permission.storage.request();
-      // if (!status.isGranted) {
-      //   throw Exception('Storage permission not granted');
-      // }
-
       // Get video metadata
       var video = await yt.videos.get(url);
       var manifest = await yt.videos.streamsClient.getManifest(video.id);
@@ -42,8 +43,64 @@ class AudioDownloader {
       await fileStream.close();
 
       debugPrint('Download complete: ${savePath.path}');
+      // AddAudioMetaData
     } catch (e) {
       debugPrint('An error occurred: $e');
     }
+  }
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          ElevatedButton(
+            child: const Text('Click to download audio'),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) {
+                  return Scaffold(
+                    appBar: AppBar(
+                      title: const Text('Download audio from YouTube'),
+                    ),
+                    body: Column(
+                      children: [
+                        TextField(
+                          controller: _controller,
+                          decoration: const InputDecoration(
+                            labelText: 'Enter YouTube Music URL',
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // YouTube Downloader
+                        ElevatedButton(
+                          onPressed: () async {
+                            final url = _controller.text;
+                            if (url.isNotEmpty) {
+                              await downloadAudio(url);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Download complete!'),
+                                  )
+                              );
+                            }
+                          },
+                          child: const Text('Download Audio'),
+                        ),
+                      ],
+                    ),
+                  );
+                })
+              );
+            }
+
+          )
+        ]
+      )
+    );
   }
 }
