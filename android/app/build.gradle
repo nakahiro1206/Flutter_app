@@ -33,14 +33,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_1_8
     }
 
-    // ⭐外部ネイティブビルド設定を追加️
-    externalNativeBuild {
-        // CMakeLists.txtからcmakeを実行
-        cmake{
-            path "../../lib/c_library/CMakeLists.txt"
-        }
-    }
-
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.flutter_app"
