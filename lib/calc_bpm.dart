@@ -3,7 +3,6 @@ import 'dart:math';
 import 'package:ffmpeg_kit_flutter/return_code.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:ffmpeg_kit_flutter/ffmpeg_kit.dart';
-import 'handle_audio_meta_data.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:wav/wav.dart';
 
@@ -16,7 +15,7 @@ class BpmAndPower {
   BpmAndPower(this.bpm);
 }
 
-Future<AudioMetaData?> calcBPM(String filepath, String title) async {
+Future<(double?, int?)> calcBPM(String filepath) async {
   final directory = await getApplicationDocumentsDirectory();
   final String outputFile = '${directory.path}/out.wav';
   if (File(outputFile).existsSync()) {
@@ -107,16 +106,16 @@ Future<AudioMetaData?> calcBPM(String filepath, String title) async {
       debugPrint("delete wav file failed! $outputFile");
     }
 
-    return AudioMetaData(title, maxBpmAndPower.bpm, (startTime * 1000).toInt(), filepath);
+    return (maxBpmAndPower.bpm, (startTime * 1000).toInt());
   } else if (ReturnCode.isCancel(returnCode)) {
     // CANCEL
     debugPrint("mp3 to wav canceled!");
     // error case.
-    return null;
+    return (null, null);
   } else {
     // ERROR
     debugPrint("mp3 to wav error!");
     // error case.
-    return null;
+    return (null, null);
   }
 }

@@ -1,10 +1,9 @@
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/cupertino.dart';
+import 'audio_meta_data.dart' show AudioMetaData;
 
-import 'handle_audio_meta_data.dart';
-
-class CreateRandomString {
+class RandomStringGenerator {
   static final Random _random = Random.secure();
 
   bool isUnique(String convertedString, List<AudioMetaData> audioMetaDataList) {
