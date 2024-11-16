@@ -34,7 +34,7 @@ class _EqualizerPageState extends State<EqualizerPage> {
       child: Column(
         children: [
         ElevatedButton(
-          child: const Text('Click to download audio'),
+          child: const Text('Move to equalizer page'),
           onPressed: () {
           Navigator.push( context, MaterialPageRoute(builder: (context) {
           return Scaffold(

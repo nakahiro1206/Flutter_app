@@ -32,14 +32,15 @@ class AudioMetaDataListDisplayState extends ConsumerState<AudioMetaDataListDispl
   }
 
   // play audio.
-  void playAudio(AudioMetaData? audioToPlay, double bpmRatio) async {
+  void playAudio(AudioMetaData? audioToPlay, double bpm) async {
     if (audioToPlay != null) {
       try {
         final String filepath = audioToPlay.filepath;
         await audioPlayer.setFilePath(filepath);
-        await audioPlayer.setSpeed(bpmRatio);
+        final double multiplier = bpm / audioToPlay.bpm;
+        await audioPlayer.setSpeed(multiplier);
         await audioPlayer.play();
-        debugPrint("Filepath: $filepath, Speed: $bpmRatio");
+        debugPrint("Filepath: $filepath, BPM: $bpm");
       } catch (e) {
         debugPrint("playAudio failed: $e");
       }
@@ -80,7 +81,7 @@ class AudioMetaDataListDisplayState extends ConsumerState<AudioMetaDataListDispl
     // general setting for audio playing.
     final selectedAudio = useState<AudioMetaData?>(null);
     final selectedAudioIndex = useState<int?>(null);
-    final bpmMultiplier = useState<double>(1.0);
+    final bpmTemporary = useState<double>(120);
     final isPlaying = useState<bool>(false);
     // final isCompleted = useState<bool>(false);
     final duration = useState<Duration?>(const Duration(seconds: 0));
@@ -104,7 +105,7 @@ class AudioMetaDataListDisplayState extends ConsumerState<AudioMetaDataListDispl
             selectedAudioIndex.value = nextIndex;
             final AudioMetaData nextAudio = val[nextIndex];
             selectedAudio.value = nextAudio;
-            playAudio(nextAudio, bpmMultiplier.value);
+            playAudio(nextAudio, bpmTemporary.value);
           }
         }
       });
@@ -124,13 +125,18 @@ class AudioMetaDataListDisplayState extends ConsumerState<AudioMetaDataListDispl
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: ListTile(
-            leading: const Icon(
+            leading: isPlaying.value ? const Icon(
               Icons.audiotrack,
+              color: Colors.pink,
+              size: 30.0,
+            ) : const Icon(
+              Icons.stop_circle_rounded,
               color: Colors.pink,
               size: 30.0,
             ),
             title: Text(
                 selectedAudio.value?.title ?? '',
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
@@ -144,7 +150,10 @@ class AudioMetaDataListDisplayState extends ConsumerState<AudioMetaDataListDispl
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               ElevatedButton(
-                onPressed: () => resumeAudio(isPlaying.value, position.value, duration.value),
+                onPressed: () {
+                  resumeAudio(isPlaying.value, position.value, duration.value);
+                  isPlaying.value = true;
+                  },
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -154,7 +163,10 @@ class AudioMetaDataListDisplayState extends ConsumerState<AudioMetaDataListDispl
                 ),
               ),
               ElevatedButton(
-                onPressed: () => pauseAudio(),
+                onPressed: () {
+                  pauseAudio();
+                  isPlaying.value = false;
+                  },
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -167,23 +179,27 @@ class AudioMetaDataListDisplayState extends ConsumerState<AudioMetaDataListDispl
           )
         ),
         Slider(
-          value: bpmMultiplier.value,
-          min: 0.5,
-          max: 2.0,
-          divisions: 30,
-          label: bpmMultiplier.value.toString(),
+          value: bpmTemporary.value,
+          min: 60,
+          max: 200,
+          divisions: 140,
+          label: bpmTemporary.value.toStringAsFixed(1),
           onChanged: (double value) {
-            bpmMultiplier.value = value;
-            debugPrint("tmp bpm: ${bpmMultiplier.value}, "
+            bpmTemporary.value = value;
+            debugPrint("tmp bpm: ${bpmTemporary.value}, "
                 "tmp duration: ${duration.value}, "
                 "tmp position: ${position.value}");
             if (audioPlayer.playing) {
-              audioPlayer.setSpeed(bpmMultiplier.value);
+              final AudioMetaData? selectedAudioMetaData = selectedAudio.value;
+              if (selectedAudioMetaData != null) {
+                final double baseBPM = selectedAudioMetaData.bpm;
+                final double multiplier = value / baseBPM;
+                audioPlayer.setSpeed(multiplier);
+              }
             }
           },
         ),
-        Text('BPM Multiplier: ${bpmMultiplier.value}x, '
-          'base BPM: ${selectedAudio.value?.bpm.toString() ?? "null"}'),
+        Text('temporary BPM: ${bpmTemporary.value}, base BPM: ${selectedAudio.value?.bpm.toString() ?? "null"}'),
         Slider(
           value: position.value.inMilliseconds.toDouble(),
           min: 0,
@@ -202,49 +218,57 @@ class AudioMetaDataListDisplayState extends ConsumerState<AudioMetaDataListDispl
           child: ListView.builder(
             itemCount: data.length,
             itemBuilder: (context, index) {
-              return ListTile(
-                leading: Text('${index + 1}.'),
-                title: Text(data[index].title),
-                trailing: PopupMenuButton<Menu>(
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (Menu item) {
-                    switch (item) {
-                      case (Menu.play):
-                        debugPrint("play");
-                        selectedAudioIndex.value = index;
-                        selectedAudio.value = data[index];
-                        playAudio(data[index], bpmMultiplier.value);
-                        break;
+              return GestureDetector(
+                  onTap: () {
+                  debugPrint("play");
+                  selectedAudioIndex.value = index;
+                  selectedAudio.value = data[index];
+                  playAudio(data[index], bpmTemporary.value);
+                },
+                child: ListTile(
+                  leading: Text('${index + 1}.'),
+                  title: Text(data[index].title),
+                  trailing: PopupMenuButton<Menu>(
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (Menu item) {
+                      switch (item) {
+                        case (Menu.play):
+                          debugPrint("play");
+                          selectedAudioIndex.value = index;
+                          selectedAudio.value = data[index];
+                          playAudio(data[index], bpmTemporary.value);
+                          break;
 
-                      case (Menu.remove):
-                        debugPrint("remove");
-                        ref.read(audioMetaDataListProvider.notifier).remove(index);
-                        if (index == selectedAudioIndex.value) {
-                          selectedAudioIndex.value = null;
-                          selectedAudio.value = null;
-                        }
-                        break;
-                    }
-                  },
-                  offset: const Offset(-40, 0),
-                  itemBuilder: (BuildContext context) => <PopupMenuEntry<Menu>>[
-                    const PopupMenuItem<Menu>(
-                      value: Menu.play,
-                      child: ListTile(
-                        leading: Icon(Icons.play_arrow_outlined),
-                        title: Text('Play'),
+                        case (Menu.remove):
+                          debugPrint("remove");
+                          ref.read(audioMetaDataListProvider.notifier).remove(index);
+                          if (index == selectedAudioIndex.value) {
+                            selectedAudioIndex.value = null;
+                            selectedAudio.value = null;
+                          }
+                          break;
+                      }
+                    },
+                    offset: const Offset(-40, 0),
+                    itemBuilder: (BuildContext context) => <PopupMenuEntry<Menu>>[
+                      const PopupMenuItem<Menu>(
+                        value: Menu.play,
+                        child: ListTile(
+                          leading: Icon(Icons.play_arrow_outlined),
+                          title: Text('Play'),
+                        ),
                       ),
-                    ),
-                    const PopupMenuDivider(),
-                    const PopupMenuItem<Menu>(
-                      value: Menu.remove,
-                      child: ListTile(
-                        leading: Icon(Icons.delete_outline),
-                        title: Text('Remove'),
+                      const PopupMenuDivider(),
+                      const PopupMenuItem<Menu>(
+                        value: Menu.remove,
+                        child: ListTile(
+                          leading: Icon(Icons.delete_outline),
+                          title: Text('Remove'),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                )
               );
             },
           ),

@@ -5,6 +5,7 @@ import 'audio_downloader.dart';
 // import 'audio_play_screen.dart';
 import 'package:flutter_app/step_bpm.dart' show PedometerDisplay;
 import 'equalizer.dart';
+import 'package:flutter_app/webview.dart' show WebViewApp;
 
 void main() {
   runApp(
@@ -57,6 +58,7 @@ class HomeScreenState extends State<HomeScreen> {
             // button to move to download page.
             const AudioDownloader(),
             const EqualizerPage(),
+            const WebViewApp(),
             PedometerDisplay()
           ],
         ),
